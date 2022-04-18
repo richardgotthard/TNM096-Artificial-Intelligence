@@ -7,7 +7,7 @@
 #include <chrono>
 
 using namespace std;
-bool h1 = false;
+bool h1 = true;
 struct Node
 {   
     Node* parent;
@@ -213,9 +213,6 @@ void solve(int initial[3][3], int x, int y,int finalX,int finaly,
                 if(!isMember(child, closedList)){
                     openList.push(child);
                 }
-                   
-           
-              
 
                
             }
@@ -239,7 +236,7 @@ int main()
     
     int final[3][3] =
     {
-         {1, 2, 3},
+        {1, 2, 3},
         {8, 0, 4},
         {7, 6, 5}
     };
@@ -247,7 +244,7 @@ int main()
 
     solve(initial, x, y, finalX, finaly, final);
     auto end = sc.now();       // end timer (starting & ending is done by measuring the time at the moment the process started & ended respectively)
-    auto time_span = static_cast<chrono::duration<double>>(end - start);   // measure time span between start & end
+    auto time_span = static_cast<chrono::duration<double> >(end - start);   // measure time span between start & end
     cout << "Operation took: " << time_span.count() << " seconds !!!";
 
     return 0;
