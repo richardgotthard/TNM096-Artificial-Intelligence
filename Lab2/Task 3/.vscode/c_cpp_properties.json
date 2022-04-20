@@ -2,7 +2,9 @@
     "configurations": [
         {
             "name": "Mac",
-            "includePath": [],
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
             "defines": [],
             "macFrameworkPath": [],
             "compilerPath": "/usr/local/bin/gcc-11",
