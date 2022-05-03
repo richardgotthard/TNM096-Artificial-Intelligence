@@ -1,166 +1,157 @@
 import sys
 import copy
 import random
+class Clause():
+    def __init__(self, value, isEmpty=False):
+        self.p = set()
+        self.n = set()
+        self.isEmpty = isEmpty
+        if not self.isEmpty:
+            self.parse(value)
+
+    def parse(self, value):
+        arr = value.split("V")
+        assert len(arr) >= 1
+        for i in arr:
+            c = i.strip()
+            if len(c) == 0:
+                continue
+            if c[0] == "-":
+                self.n.add(c[1:])
+            else:
+                self.p.add(c)
+
+    def __eq__(self, right):
+        return self.p == right.p and self.n == right.n
+
+    def __hash__(self):
+
+        return hash((frozenset(self.p), frozenset(self.n)))
+
+    def subsum(self, other):
+        return self.p.issubset(other.p) and self.n.issubset(other.n)
+
+    def strict_subsum(self, right):
+        sub = self.subsum(right)
+        l1 = len(self.p) + len(self.n)
+        l2 = len(right.p) + len(right.n)
+        return sub and l1 < l2
+
+    def __str__(self):
+        values = []
+        for value in self.p:
+            values.append(value)
+        for value in self.n:
+            values.append("-" + value)
+        return " V ".join(values)
+
+    def remove_duplicates(self):
+        for A in self.p:
+            for B in self.n:
+                if A == B:
+                    self.p.remove(A)
+                    self.n.remove(B)
+
+
+def resolution(A, B):
+    A = copy.deepcopy(A)
+    B = copy.deepcopy(B)
+
+    if(len(A.p & B.n) == 0 and len(A.n & B.p) == 0):
+        return False
+
+    if(len(A.p & B.n) != 0):
+        a = random.sample(A.p & B.n, k=1)[0]
+        A.p.remove(a)
+        B.n.remove(a)
+    else:
+        a = random.sample(A.n & B.p, k=1)[0]
+        A.n.remove(a)
+        B.p.remove(a)
+
+
+    C = Clause("", True)
+    C.p = A.p | B.p
+    C.n = A.n | B.n
+
+    if len(C.p & C.n) != 0: #C is a tautology
+        return False
+    print()
+    C.remove_duplicates()
+    return C
 
 
 
-class Schedule():
-    def __init__(self, state:[],  classroom_size:int, timeslot_size:int, classrooms:[], timeslots:[]):
-        self.state = state
-        self.timeslot_size = timeslot_size
-        self.classroom_size = classroom_size
-        self.classrooms = classrooms
-        self.timeslots = timeslots
-        
-    def print_state(self):
-        counter = 0
-        print(self.classrooms)
-        for i in range(self.timeslot_size):
-                print()
-                print(self.timeslots[i], end=" ")
-                for j in range(self.classroom_size):
-                    print(self.state[counter], end=" ")
-                    counter = counter + 1
-        print()
 
-    def min_conflicts(self, max_steps:int=1):
-        for i in range(100):
-            #if((i + 1)%10 == 0):
-                #print(max_steps-1-1)
+def Solver(KB):
+    KB_prim = set()
+    while True:
+        S = set()
+        KB = copy.deepcopy(KB)
+        KB_prim = copy.deepcopy(KB)
+        for A in KB:
+            for B in KB:
+                if not (A==B):
+                    C = resolution(A,B)
+                    if C is not False:
+                        S.add(C)
 
-            conflicts = []
-            counter = 0
-            conflict_count = 0
-            for row in range(self.timeslot_size):
-                #print("row", row)
-                for column in range(self.classroom_size):
-                    if(self.is_in_conflict(row,column)):
-                         conflict_count = conflict_count +1
-                         conflicts.append(self.state[counter])
-                    counter = counter + 1
+        if(len(S) == 0):
+            return KB
 
-            print(conflict_count)
-            print(conflicts)
-
-            if(conflict_count == 0):
-                return
+        KB = Incorporate(S, KB)
+        if(KB_prim == KB):
+            return KB
 
 
-            #Pick random value from conflicts
-            indexT = random.randint(1, len(conflicts))
-            conflict_value = conflicts[indexT]
-            print(conflict_value)
-            print(self.state.index(conflict_value))
+def Incorporate(S, KB):
+    for A in S:
+        KB = Incorporate_clause(A,KB)
+    return KB
 
-            #indexString = self.state.index(indexT)
-
-            #1. Loop through all spots
-                #2. Is the spot valid?
-                #3. If true calculate the total conflict
-                #4. If lower conflict then previous we have a new minimum
-            #5 Swap the index with spot that give smallest conflict
-
-
-            smallest_conflict = 1000
-            temp = self.state
-            swap_row_index = 0
-            swap_column_index = 0
-            for row in range(self.timeslot_size):
-                # print("row", row)
-                for column in range(self.classroom_size):
-                    print(conflict_count)
-
-                    if(conflict_count < smallest_conflict):
-                        smallest_conflict = conflict_count
-                        swap_row_index=row
-                        swap_column_index=column
-                        swap_classroom = self.state[column+row*3]
-                    #Trying to swap the random
-                    #print("Before")
-                    self.print_state()
-                    self.state = temp
-                    swap_index = self.state.index(conflict_value)
-                    self.state[swap_index] = self.state[row*3 + column]
-                    self.state[row*3+column] = conflict_value
-                    print("After")
-
-                    self.print_state()
+def Incorporate_clause(A, KB):
+    for B in KB:
+        if(B.strict_subsum(A)):
+            return KB
+    delete = set()
+    for B in KB:
+        if(A.strict_subsum(B)):
+            delete.add(B)
+    for D in delete:
+        KB.remove(D)
 
 
-                    for rowX in range(self.timeslot_size):
-                        print("row", conflict_count)
-                        for columnX in range(self.classroom_size):
-                            if self.is_in_conflict(rowX, columnX):
-                                conflict_count = conflict_count + 1
-                                conflicts.append(self.state[counter])
-                            counter = counter + 1
-            print(swap_classroom)
+    KB.add(A)
+    return KB
 
+if __name__ == '__main__':
+    '''print("Starting Task 1:")
+    A = Clause("a V b V -c")
+    B = Clause("c V b")
+    sum = resolution(A, B)
 
+    assert sum == Clause("a V b")
+    A = Clause("a V b V -c")
+    B = Clause("d V b V -g")
+    sum = resolution(A, B)
+    assert sum == False
 
-        #self.is_in_conflict(index/3, index % 3)
-            #Test what value that result in least conflict
+    A = Clause("-b V c V t")
+    B = Clause("-c V z V b")
+    sum = resolution(A, B)
+    assert sum == False'''
 
-            #Switch with value that result in lowest conflicts
+    print("")
+    print("Starting Task 2:")
+    KB = set()
+    KB.add(Clause("-sun V -money V ice"))
+    KB.add(Clause("-money V ice V movie"))
+    KB.add(Clause("-movie V money"))
+    KB.add(Clause("-movie V -ice"))
+    KB.add(Clause("sun V money V cry"))
+    sum = Solver(KB)
 
+    print("Results")
+    for i in sum:
+        print(i)
 
-    def is_in_conflict(self,row:int, column:int):
-        #col 0 1 2
-        row = row*3
-        if(column == 2):
-            if(self.state[row][2] != self.state[row+column][2] or self.state[row+1][2] != self.state[row+column][2] or (self.state[row+column][2] == 5)):
-                return False
-        if(column == 1):
-            if(self.state[row][2] != self.state[row + column][2] or self.state[row + 2][2] != self.state[row + column][2] or (self.state[row + column][2] == 5)):
-                return False
-        if (column == 0):
-            if(self.state[row+2][2] != self.state[row + column][2] or self.state[row + 1][2] !=
-                self.state[row + column][2] or (self.state[row + column][2] == 5)):
-                return False
-
-        return True
-
-
-
-def main():
-    #Input
-    #MT101 MT102 MT103 MT104 MT105 MT106 MT107
-    #MT201 MT202 MT203 MT204 MT205 MT206
-    #MT301 MT302 MT303 MT304
-    #MT401 MT402 MT403
-    #MT501 MT502
-
-    #Output
-    # TP51  SP34   K3
-    #9 ""    ""    MT101
-    #10 MT205 MT303 MT402
-    #11 MT201 MT304 MT107
-    #12 MT202 MT102 MT302
-    #1 MT502 MT206 MT105
-    #2 MT204 MT104 MT501
-    #3 MT106 MT301 MT403
-    #4 MT401 MT203 MT103
-
-    data = '"5555" "5555" MT101 MT102 MT103 MT104 MT105 MT106 MT107 MT201 MT202 MT203 MT204 MT205 MT206 MT301 MT302 MT303 MT304 MT401 MT402 MT403 MT501 MT502'
-    print(data)
-    classrooms_size = 3  #TP51, SP34, K3
-    timeslots_size = 8 #9, 10 ,11, 12 ,1 ,2 ,3 ,4
-    classrooms = 'TP51 SP34 K3'
-    timeslots = '9 10 11 12 1 2 3 4'
-    max_steps = 200000
-
-    initial_state = []
-    classrooms_state = []
-    timeslots_state = []
-    initial_state = data.split()
-    classrooms_state = classrooms.split()
-    timeslots_state = timeslots.split()
-    row = []
-    counter = 0
-
-    schedule  = Schedule(initial_state, classrooms_size, timeslots_size, classrooms_state, timeslots_state)
-    schedule.print_state()
-    finish = schedule.min_conflicts(max_steps)
-    #schedule.print_state()
-
-if __name__ == "__main__": main()
