@@ -142,7 +142,7 @@ if __name__ == '__main__':
     assert sum == False'''
 
     print("")
-    print("Starting Task 2:")
+    print("Starting Task 1B:")
     KB = set()
     KB.add(Clause("-sun V -money V ice"))
     KB.add(Clause("-money V ice V movie"))
@@ -155,3 +155,16 @@ if __name__ == '__main__':
     for i in sum:
         print(i)
 
+print("")
+    print("Starting Task 2:")
+    # Robbery problemm
+    KB = set()
+    KB.add(Clause("a V b V c"))
+    KB.add(Clause("-c V a"))
+    KB.add(Clause("da V dc"))
+    KB.add(Clause("-db"))
+    sum = Solver(KB)
+
+    print("Results")
+    for i in sum:
+        print(i)
