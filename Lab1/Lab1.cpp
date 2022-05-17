@@ -5,9 +5,12 @@
 #include <queue>
 #include <iterator>
 #include <chrono>
+#include <unordered_set>
+#include <algorithm>
+
 
 using namespace std;
-bool h1 = true;
+bool h1 = false;
 struct Node
 {   
     Node* parent;
@@ -28,6 +31,22 @@ void printMatrix(int mat[3][3])
     }
     
 }
+class hashFunction
+{
+public:
+    size_t operator()(const Node* node) const
+    {
+        size_t out{};
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j){
+                out *= 10;
+                out += node->mat[i][j];
+            }
+           
+        }
+        return out;
+    }
+};
 
 Node* newNode(int mat[3][3], int x, int y, int newX,
     int newY, int level, Node* parent)
@@ -57,17 +76,14 @@ int calculateCost( int initial[3][3], int final[3][3])
     int count = 0;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
-            if (initial[i][j] && initial[i][j] != final[i][j])
+            if (initial[i][j] && (initial[i][j] != final[i][j]))
                 count++;
     //return f(s) = c(s) + h(s)
     return count;
 }
 
-int calculateManhattanCost(Node* lhs, Node* rhs, int initial[3][3], int final[3][3])
+int calculateManhattanCost(int initial[3][3], int final[3][3])
 {
-
-
-
     int sum = 0;
     
     int goalRow;
@@ -123,7 +139,7 @@ bool isSameMatrix(const int initial[3][3], const int final[3][3])
     //return f(s) = c(s) + h(s)
     return true;
 }
-bool isMember(const Node* lhs, const vector<Node*> closedList)
+/* bool isMember(const Node* lhs, const std::unordered_set<Node*, hashFunction> closedList)
 {   
     for (int i = 0; i < closedList.size(); i++) {
         if (isSameMatrix(lhs->mat, closedList[i]->mat)) {
@@ -131,7 +147,7 @@ bool isMember(const Node* lhs, const vector<Node*> closedList)
         }
     };
     return false;
-};
+};*/
 
 struct compareT {
     bool operator()(const Node* a, const Node* b) {
@@ -143,48 +159,45 @@ struct compareT {
 
 
 
-
 void solve(int initial[3][3], int x, int y,int finalX,int finaly,
     int final[3][3])
 {   
-    priority_queue<Node*, vector<Node*>, compareT> openList;
-    vector<Node*> closedList;
+    priority_queue<Node*, vector<Node*>, compareT> openList; //All paths
+    //vector<Node*> closedList;
+   // std::make_heap(closedList.begin(), closedList.end());
+
+    std::unordered_set<Node*, hashFunction> closedList{};
 
     Node* start = newNode(initial, x, y, x, y, 0, nullptr);
     Node* goal = newNode(final, finalX, finaly, finalX, finaly, 0, nullptr);
-
     if (h1 == true) {
+        std::cout << " Running h1 ";
         start->cost = calculateCost(initial, final);
 
     }
     else {
-        start->cost = calculateManhattanCost(start, goal, initial, final);
+        std::cout << " Running h2 ";
+
+        start->cost = calculateManhattanCost( initial, final);
 
 
     }
     //start->cost = calculateManhattanCost(start->x, start->y, final->x,final->y);
     openList.push(start);
-
-
     int counter = 0;
     while (!openList.empty())
     {
         // •Remove node n with the smallest value of f(n) from OPEN and move it to list CLOSED.
       
-        Node* min = openList.top();
-        closedList.push_back(min);
+        Node* top = openList.top();
         openList.pop();
-       
-        
-
-
-        // if min is an answer node
-        if (min->cost == 0)
+        closedList.insert(top);
+        if (top->cost == 0)
         {
 
             // print the path from root to destination;
-            printPath(counter, min);
-            cout << "\n Steps: " << counter-1 << "\n";
+            printPath(counter, top);
+            //cout << "\n Steps: " << counter-1 << "\n";
 
             return;
         }
@@ -194,29 +207,35 @@ void solve(int initial[3][3], int x, int y,int finalX,int finaly,
         {
             //int row[] = { 1, 0, -1, 0 };
             //int col[] = { 0, -1, 0, 1 };
-            if (validSwap(min->x + row[i], min->y + col[i]) )
+            if (validSwap(top->x + row[i], top->y + col[i]) )
             {
                 
                 
-                Node* child = newNode(min->mat, min->x,
-                    min->y, min->x + row[i],
-                    min->y + col[i],
-                    min->level + 1, min);
+                Node* child = newNode(top->mat, top->x,
+                    top->y, top->x + row[i],
+                    top->y + col[i],
+                    top->level + 1, top);
 
-                if (h1 == true) {
+            if (h1 == true) {
                     child->cost = calculateCost(child->mat, final);
+                    //std::cout << child->cost << "\n";
 
-                }
-                else {
-                    child->cost = calculateManhattanCost(child, goal, child->mat, final);
-                }
-                if(!isMember(child, closedList)){
+             }
+              else {
+                    child->cost = calculateManhattanCost( child->mat, final);
+               }
+
+                /*if (!isMember(child, closedList)) {
+                    openList.push(child);
+                   
+
+                }*/
+                if (closedList.find(child) == closedList.end()) {
                     openList.push(child);
                 }
-
-               
             }
         }
+
     }
 }
 
@@ -227,11 +246,11 @@ int main()
     
     int initial[3][3] =
     {
-        {5, 6, 7},
-        {4, 0, 8},
-        {3, 2, 1}
+        {5,6, 7},
+        {4, 6, 3},
+        {0, 7, 5}
     };
-    int x = 1, y = 1; //initial blank
+    int x = 2, y = 0; //initial blank
 
     
     int final[3][3] =
@@ -244,9 +263,10 @@ int main()
 
     solve(initial, x, y, finalX, finaly, final);
     auto end = sc.now();       // end timer (starting & ending is done by measuring the time at the moment the process started & ended respectively)
-    auto time_span = static_cast<chrono::duration<double> >(end - start);   // measure time span between start & end
+    auto time_span = static_cast<chrono::duration<double>>(end - start);   // measure time span between start & end
     cout << "Operation took: " << time_span.count() << " seconds !!!";
 
     return 0;
 }
+
 
